@@ -2,32 +2,38 @@
 
 # file: xthreads.rb
 
-class XThreads
+class XThreads < Hash
 
   def initialize()
-    @threads = {}
+    @threads = self
   end
 
   class XThread
+  
+    attr_reader :state
+
     def initialize(name, options={}, &blk)
-      opts = {interval: 4}.merge(options)
+      opts = {interval: 4, loop: true}.merge(options)
       @name = name
       @initialized = true
-      @start = false
+      @state = :stop
 
       @thread = Thread.new do 
         puts "#{name} created\n"
-        Thread.current['name'] = name; 
-        loop do
+        Thread.current['name'] = name
+        loop = true
+        while loop == true do
           
-          if @start == true then
+          if @state == :start then
             blk.call
+            @state = :dead
+            loop = false if opts[:loop] == false
           else
             puts 'stopped' unless @initialized == true
             @initialized = false
           end 
 
-          Thread.stop if @start == false 
+          Thread.stop if @state == :stop
 
           sleep opts[:interval]
         end
@@ -37,27 +43,45 @@ class XThreads
 
     def start
       puts "#{@name} starting ..."
-      @start = true
+      @state = :start
       @thread.run
     end
 
     def stop
       puts "'#{@name}' stopping ..."
-      @start = false      
+      @state = :stop
     end
 
     def kill
       puts 'XThread killed'
       @thread.kill
+      @state = :dead
+    end
+    
+    def thread
+      @thread
     end
   end
 
   def create_loop(name, options={}, &blk)
-    @threads[name] = XThread.new name, options, &blk
+    @threads[name] = XThread.new name,  options, &blk
     @threads[name]
   end
-  
-  def list()
-    @threads
+
+  def create_thread(name, options={}, &blk)
+    cleanup
+    @threads[name] = XThread.new name, options.merge(interval: 0, loop: false), &blk
+    @threads[name]
   end
+
+  private
+
+  # Remove any dead threads
+  #
+  def cleanup()
+    @threads.each do |name, thread| 
+      @threads.delete name if thread.state == :dead
+    end
+  end
+
 end
