@@ -10,7 +10,7 @@ class XThreads < Hash
 
   class XThread
   
-    attr_reader :state
+    attr_reader :state, :result
 
     def initialize(name, options={}, &blk)
       opts = {interval: 4, loop: true}.merge(options)
@@ -25,7 +25,7 @@ class XThreads < Hash
         while loop == true do
           
           if @state == :start then
-            blk.call
+            @result = blk.call
             @state = :dead
             loop = false if opts[:loop] == false
           else
