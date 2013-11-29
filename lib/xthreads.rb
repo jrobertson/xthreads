@@ -12,24 +12,31 @@ class XThreads < Hash
   
     attr_reader :state, :result
 
-    def initialize(name, options={}, &blk)
+    def initialize(name, args, options={}, &blk)
+
       opts = {interval: 4, loop: true}.merge(options)
+      @loop = opts[:loop]
+
       @name = name
       @initialized = true
       @state = :stop
 
-      @thread = Thread.new do 
+      @thread = Thread.new(*args) { 
         puts "#{name} created\n"
         Thread.current['name'] = name
         loop = true
         while loop == true do
-          
+
+          #puts '@state : ' + @state.inspect
+
           if @state == :start then
-            @result = blk.call
-            @state = :dead
+            r = blk.call(args)
+            @result = r
+            Thread.current[:result] = r
+            #@state = :dead
             loop = false if opts[:loop] == false
           else
-            puts 'stopped' unless @initialized == true
+            #puts 'stopped' unless @initialized == true
             @initialized = false
           end 
 
@@ -37,14 +44,16 @@ class XThreads < Hash
 
           sleep opts[:interval]
         end
-      end
+      }
+      
 
     end 
 
     def start
+
       puts "#{@name} starting ..."
       @state = :start
-      @thread.run
+      @thread.send @loop == true ? :join : :run
     end
 
     def stop
@@ -68,9 +77,9 @@ class XThreads < Hash
     @threads[name]
   end
 
-  def create_thread(name, options={}, &blk)
-    cleanup
-    @threads[name] = XThread.new name, options.merge(interval: 0, loop: false), &blk
+  def create_thread(name, args, options={}, &blk)
+    #cleanup
+    @threads[name] = XThread.new name, args, options.merge(interval: 0, loop: false), &blk
     @threads[name]
   end
 
