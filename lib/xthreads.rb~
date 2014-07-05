@@ -73,7 +73,7 @@ class XThreads < Hash
   end
 
   def create_loop(name, options={}, &blk)
-    @threads[name] = XThread.new name, args=[], options, &blk
+    @threads[name] = XThread.new name,  options, &blk
     @threads[name]
   end
 
